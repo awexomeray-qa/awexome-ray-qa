@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>aweXome Ray — Investor Q&A</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#16161f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --accent:#c8f55a;--accent2:#8bffd4;
+  --text:#f0ede6;--text2:#9996a0;--text3:#5c5968;
+  --card:#13131c;--radius:12px;
+  --mono:'DM Mono',monospace;--serif:'DM Serif Display',serif;--sans:'Pretendard',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+
+/* MODE BAR */
+.mode-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:50}
+.mode-logo{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.15em}
+.mode-tabs{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px}
+.mode-tab{padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:.04em}
+.mode-tab.active{background:var(--accent);color:#0a0a0f;font-weight:600}
+
+/* PAGES */
+.page{display:none}.page.on{display:block}
+
+/* LOCK */
+.lock-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:18px}
+.lock-icon{width:48px;height:48px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center}
+.lock-title{font-family:var(--mono);font-size:13px;color:var(--text2);letter-spacing:.05em}
+.lock-input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 18px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;width:200px;text-align:center;letter-spacing:.2em}
+.lock-input:focus{border-color:rgba(200,245,90,.4)}
+.lock-btn{padding:10px 28px;border-radius:8px;border:none;background:var(--accent);color:#0a0a0f;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer}
+.lock-err{font-size:11px;font-family:var(--mono);color:#E24B4A;display:none}
+
+/* HERO */
+.hero{padding:40px 32px 24px;position:relative;overflow:hidden}
+.hero-glow{position:absolute;top:-80px;right:-100px;width:500px;height:350px;background:radial-gradient(ellipse,rgba(200,245,90,.05) 0%,transparent 70%);pointer-events:none}
+.hero-tag{font-family:var(--mono);font-size:10px;color:var(--accent2);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.hero-tag::before{content:'';display:block;width:16px;height:1px;background:var(--accent2)}
+.hero h1{font-family:var(--serif);font-size:clamp(28px,4vw,52px);line-height:1.1;letter-spacing:-.02em;margin-bottom:12px}
+.hero h1 span{color:var(--accent);font-style:italic}
+.hero p{font-size:13px;color:var(--text2);max-width:500px;line-height:1.7}
+
+/* STATS */
+.stats{display:flex;margin:20px 32px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--card)}
+.stat{flex:1;padding:16px 18px;border-right:1px solid var(--border)}
+.stat:last-child{border-right:none}
+.stat-n{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--accent);margin-bottom:2px}
+.stat-l{font-size:11px;color:var(--text3);font-family:var(--mono)}
+@media(max-width:560px){.stats{flex-wrap:wrap}.stat{flex:1 1 45%;border-right:none;border-bottom:1px solid var(--border)}}
+
+/* MAIN GRID */
+.pub-main{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:4px 32px 60px;align-items:start}
+@media(max-width:860px){.pub-main{grid-template-columns:1fr}.chat-panel{position:static!important;height:55vh!important}}
+
+/* TABS + SEARCH */
+.tab-row{display:flex;gap:2px;margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:3px}
+.tab-btn{flex:1;padding:8px 12px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:var(--accent);color:#0a0a0f;font-weight:600}
+.search-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.sbox{flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none}
+.sbox::placeholder{color:var(--text3)}.sbox:focus{border-color:var(--border2)}
+.csel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text2);font-family:var(--sans);font-size:12px;outline:none;cursor:pointer}
+.csel option{background:var(--bg3)}
+.clbl{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px;letter-spacing:.05em}
+
+/* QA CARDS */
+.qa-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
+.qa-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);transform:scaleY(0);transition:transform .2s;transform-origin:bottom}
+.qa-item:hover::before,.qa-item.open::before{transform:scaleY(1)}
+.qa-item:hover{border-color:var(--border2);background:var(--bg3)}
+.qa-item.open{border-color:rgba(200,245,90,.2)}
+.qi-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
+.qi-id{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em;white-space:nowrap;padding-top:1px}
+.qi-cat{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.qi-q{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;flex:1}
+.qi-sum{font-size:12px;color:var(--text2);line-height:1.6}
+.qi-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.8}
+.qi-detail.show{display:block}
+.qi-kws{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px}
+.kwc{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:1px 6px}
+.ask-btn{display:inline-flex;align-items:center;gap:5px;margin-top:9px;padding:4px 10px;border-radius:5px;background:rgba(200,245,90,.07);border:1px solid rgba(200,245,90,.18);color:var(--accent);font-size:11px;font-family:var(--mono);cursor:pointer;transition:background .2s}
+.ask-btn:hover{background:rgba(200,245,90,.14)}
+.empty{padding:28px;text-align:center;font-size:12px;color:var(--text3);font-family:var(--mono)}
+.loading{padding:28px;text-align:center;font-size:12px;color:var(--text3);font-family:var(--mono);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* CHAT PANEL */
+.chat-panel{position:sticky;top:60px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;height:78vh;min-height:460px;overflow:hidden}
+.chat-hdr{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.chat-title{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.chat-title b{color:var(--accent);font-weight:500}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.chat-msgs::-webkit-scrollbar{width:3px}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.msg{display:flex;flex-direction:column;gap:3px;animation:fu .25s ease}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg-role{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.msg.user .msg-role{color:var(--accent);text-align:right}
+.msg-bbl{padding:8px 11px;border-radius:8px;font-size:12px;line-height:1.7}
+.msg.ai .msg-bbl{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:2px 8px 8px 8px}
+.msg.user .msg-bbl{background:rgba(200,245,90,.09);border:1px solid rgba(200,245,90,.18);color:var(--text);border-radius:8px 2px 8px 8px;align-self:flex-end}
+.msg.user{align-items:flex-end}
+.typing{display:flex;gap:3px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:2px 8px 8px 8px;width:fit-content}
+.td{width:5px;height:5px;border-radius:50%;background:var(--text3);animation:ty 1.2s infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes ty{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.chat-sugs{padding:0 12px 8px;display:flex;flex-wrap:wrap;gap:4px}
+.sug{font-size:10px;font-family:var(--mono);color:var(--text3);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.sug:hover{color:var(--accent);border-color:rgba(200,245,90,.3)}
+.chat-ia{padding:9px 12px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:flex-end}
+.chat-inp{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;resize:none;max-height:72px;min-height:34px;line-height:1.5}
+.chat-inp:focus{border-color:var(--border2)}.chat-inp::placeholder{color:var(--text3)}
+.send-btn{width:34px;height:34px;border-radius:7px;border:none;background:var(--accent);color:#0a0a0f;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s}
+.send-btn:hover{opacity:.85}.send-btn:disabled{opacity:.3;cursor:not-allowed}
+.chat-note{padding:5px 12px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;border-top:1px solid var(--border)}
+
+/* ADMIN */
+.adm-wrap{padding:24px}
+.adm-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.adm-title{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.05em}
+.adm-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.adm-btns{display:flex;gap:8px}
+.add-btn{padding:7px 14px;border-radius:7px;border:1px solid rgba(200,245,90,.3);background:rgba(200,245,90,.08);color:var(--accent);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
+.add-btn:hover{background:rgba(200,245,90,.15)}
+.out-btn{padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s}
+.out-btn:hover{color:var(--text2);border-color:var(--border2)}
+.adm-tabs{display:flex;gap:2px;margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content}
+.adm-tab{padding:7px 14px;border-radius:7px;border:none;background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
+.adm-tab.active{background:var(--accent);color:#0a0a0f;font-weight:600}
+.adm-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:7px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.adm-left{flex:1;min-width:0}
+.adm-meta{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.adm-id{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em}
+.adm-cat{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+.adm-q{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;line-height:1.4}
+.adm-s{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:480px}
+.adm-acts{display:flex;gap:5px;flex-shrink:0}
+.act-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:11px;cursor:pointer;color:var(--text2);font-family:var(--mono);transition:all .15s}
+.act-btn:hover{background:var(--bg3);border-color:var(--border2)}
+.act-btn.del:hover{background:rgba(226,75,74,.1);color:#E24B4A;border-color:rgba(226,75,74,.3)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:16px;letter-spacing:.05em}
+.field{margin-bottom:12px}
+.field label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-family:var(--mono)}
+.field input,.field textarea,.field select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none}
+.field input:focus,.field textarea:focus{border-color:rgba(200,245,90,.4)}
+.field textarea{min-height:75px;resize:vertical;line-height:1.6}
+.field select option{background:var(--bg3)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-btns button{padding:8px 18px;border-radius:7px;font-size:12px;cursor:pointer;font-family:var(--mono)}
+.btn-c{border:1px solid var(--border2);background:transparent;color:var(--text2)}
+.btn-s{border:1px solid rgba(200,245,90,.3);background:rgba(200,245,90,.1);color:var(--accent);font-weight:600}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid rgba(200,245,90,.3);border-radius:8px;padding:9px 14px;font-family:var(--mono);font-size:11px;color:var(--accent);z-index:200;transform:translateY(50px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-color:rgba(226,75,74,.4);color:#E24B4A}
+
+/* FOOTER */
+footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+footer span{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.conf{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODE BAR -->
+<div class="mode-bar">
+  <span class="mode-logo">aweXome Ray · IR</span>
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="btnPublic" onclick="showMode('public')">투자자 열람</button>
+    <button class="mode-tab" id="btnAdmin" onclick="showMode('admin')">관리자</button>
+  </div>
+</div>
+
+<!-- PUBLIC PAGE -->
+<div class="page on" id="pubPage">
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-tag">Investor Q&amp;A Portal</div>
+    <h1>투자자를 위한<br><span>Q&amp;A 아카이브</span></h1>
+    <p>어썸레이의 CNT 소재, EUV 펠리클, 사업 전략에 관한 Q&A를 열람하거나 AI에게 직접 질의하세요.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="totalCount">—</div><div class="stat-l">총 Q&A 항목</div></div>
+    <div class="stat"><div class="stat-n">270억</div><div class="stat-l">누적 투자 유치</div></div>
+    <div class="stat"><div class="stat-n">2028</div><div class="stat-l">기술 특례 상장 목표</div></div>
+    <div class="stat"><div class="stat-n">T-3</div><div class="stat-l">TCB 기술 등급</div></div>
+  </div>
+  <div class="pub-main">
+    <div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="pubSwitchTab('qa')">투자사 Q&amp;A</button>
+        <button class="tab-btn" onclick="pubSwitchTab('faq')">인터뷰 FAQ</button>
+      </div>
+      <div class="search-row">
+        <input class="sbox" id="pubSrc" placeholder="질문, 키워드 검색..." oninput="pubRender()">
+        <select class="csel" id="pubCat" onchange="pubRender()"><option value="">전체</option></select>
+      </div>
+      <div class="clbl" id="pubCount"></div>
+      <div id="pubList"><div class="loading">데이터 불러오는 중...</div></div>
+    </div>
+    <div class="chat-panel">
+      <div class="chat-hdr">
+        <div class="cdot"></div>
+        <span class="chat-title"><b>AI</b> · aweXome Ray 어시스턴트</span>
+      </div>
+      <div class="chat-msgs" id="chatMsgs">
+        <div class="msg ai">
+          <span class="msg-role">AI Assistant</span>
+          <div class="msg-bbl">안녕하세요! 어썸레이 투자자 Q&amp;A 어시스턴트입니다.<br><br>CNT 소재, EUV 펠리클, 투자 구조, 기술 경쟁력 등 무엇이든 질문해 주세요.</div>
+        </div>
+      </div>
+      <div class="chat-sugs" id="chatSugs">
+        <span class="sug" onclick="askSug(this)">CNT 경쟁 우위</span>
+        <span class="sug" onclick="askSug(this)">2026년 매출 목표</span>
+        <span class="sug" onclick="askSug(this)">펠리클 시장 규모</span>
+        <span class="sug" onclick="askSug(this)">IPO 일정</span>
+        <span class="sug" onclick="askSug(this)">삼성 의존도 리스크</span>
+      </div>
+      <div class="chat-ia">
+        <textarea class="chat-inp" id="chatInp" placeholder="질문을 입력하세요..." rows="1" onkeydown="chatKey(event)" oninput="ar(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendChat()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 7h12M7 2l6 5-6 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="chat-note">Powered by Claude API · Supabase DB 실시간 연동</div>
+    </div>
+  </div>
+  <footer>
+    <span>© 2026 aweXome Ray Inc. — CNT Crafting Platform</span>
+    <span class="conf">CONFIDENTIAL · IR USE ONLY</span>
+  </footer>
+</div>
+
+<!-- ADMIN PAGE -->
+<div class="page" id="admPage">
+  <div class="lock-wrap" id="lockScreen">
+    <div class="lock-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9996a0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+    </div>
+    <div class="lock-title">관리자 비밀번호</div>
+    <input class="lock-input" type="password" id="pwInp" placeholder="••••••" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="lock-err" id="pwErr">비밀번호가 올바르지 않습니다.</div>
+    <button class="lock-btn" onclick="checkPw()">입장</button>
+  </div>
+  <div id="admContent" style="display:none">
+    <div class="adm-wrap">
+      <div class="adm-hdr">
+        <div>
+          <div class="adm-title">Q&amp;A 관리 대시보드</div>
+          <div class="adm-sub">수정 즉시 Supabase DB에 저장 → 투자자 열람 페이지에 실시간 반영</div>
+        </div>
+        <div class="adm-btns">
+          <button class="add-btn" onclick="openModal()">+ 항목 추가</button>
+          <button class="out-btn" onclick="logout()">로그아웃</button>
+        </div>
+      </div>
+      <div class="adm-tabs">
+        <button class="adm-tab active" onclick="admSwitchTab('qa')">투자사 Q&amp;A</button>
+        <button class="adm-tab" onclick="admSwitchTab('faq')">인터뷰 FAQ</button>
+      </div>
+      <div class="search-row">
+        <input class="sbox" id="admSrc" placeholder="검색..." oninput="admRender()">
+        <select class="csel" id="admCat" onchange="admRender()"><option value="">전체</option></select>
+      </div>
+      <div class="clbl" id="admCount"></div>
+      <div id="admList"><div class="loading">데이터 불러오는 중...</div></div>
+    </div>
+    <div class="modal-bg" id="modalBg">
+      <div class="modal">
+        <div class="modal-title" id="mTitle">새 항목 추가</div>
+        <div class="field"><label>ID (예: Q28)</label><input id="fId" placeholder="Q28"></div>
+        <div class="field"><label>탭</label>
+          <select id="fTab">
+            <option value="qa">투자사 Q&A</option>
+            <option value="faq">인터뷰 FAQ</option>
+          </select>
+        </div>
+        <div class="field"><label>카테고리</label><input id="fCat" placeholder="예: EUV 펠리클"></div>
+        <div class="field"><label>질문</label><input id="fQ" placeholder="질문을 입력하세요"></div>
+        <div class="field"><label>요약 답변</label><textarea id="fSum" placeholder="한 문장 요약"></textarea></div>
+        <div class="field"><label>상세 답변</label><textarea id="fDet" style="min-height:90px" placeholder="• 항목1&#10;• 항목2"></textarea></div>
+        <div class="field"><label>키워드 (쉼표 구분)</label><input id="fKw" placeholder="CNT,펠리클,삼성"></div>
+        <div class="modal-btns">
+          <button class="btn-c" onclick="closeModal()">취소</button>
+          <button class="btn-s" onclick="saveItem()">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── SUPABASE 설정 ── */
+const SUPABASE_URL = 'https://aehromyvzjzbkfcqspqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_p_9upkexFkkMsjEA4yOKlg_Ssu_n4o3';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ADMIN_PW = 'awexome2026';
+
+let allData = [];
+let curPubTab = 'qa';
+let curAdmTab = 'qa';
+let editingDbId = null;
+let chatHistory = [];
+
+/* ── 데이터 로드 ── */
+async function loadData() {
+  try {
+    const { data, error } = await sb.from('qa_items').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
+    if (error) throw error;
+    allData = data || [];
+    if (allData.length === 0) await seedDefaultData();
+    else { pubBuildCat(); pubRender(); }
+  } catch(e) {
+    console.error(e);
+    showToast('DB 연결 오류: ' + e.message, true);
+    document.getElementById('pubList').innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
+  }
+}
+
+/* ── 기본 데이터 시드 ── */
+async function seedDefaultData() {
+  const defaults = [
+    {tab:'qa',category:'EUV 펠리클',item_id:'Q1',question:'High-NA EUV가 실제로 양산까지 갈까요? 타이밍 리스크는 어떻게 보나요?',summary:'High-NA는 갈지 말지의 문제가 아니라, 언제 어떤 속도로 메인스트림이 되느냐의 문제입니다.',detail:'• ASML: High-NA EUV 이미 출하 시작, 2nm 이하 노드 로드맵 확정\n• 삼성전자: 2026년 3분기 High-NA EUV 투입 전제로 CNT 펠리클 Qual 완료 요구\n• TSMC: 2027년 High-NA EUV 파일럿 라인 가동 계획\n• 2nm 이하 노드에서는 High-NA가 사실상 유일한 경로',keywords:'High-NA,EUV,양산,ASML,삼성,TSMC,2nm',sort_order:1},
+    {tab:'qa',category:'EUV 펠리클',item_id:'Q2',question:'EUV 펠리클 수요가 생각보다 크지 않을 수 있다는 우려에 대해 어떻게 보나요?',summary:'보수적인 가정만으로도 Logic용 EUV 펠리클 시장은 2026~28년 기준 연 9~12억 달러 규모입니다.',detail:'• Logic용 EUV 장비 누적: 2026년 361대 / 2027년 416대 / 2028년 476대\n• 전체 시장: 2026년 $915M / 2027년 $1,054M / 2028년 $1,206M\n• High-NA 전용 시장: 2026년 $81M / 2027년 $115M / 2028년 $149M',keywords:'EUV,펠리클 수요,시장 규모,수명,교체 주기',sort_order:2},
+    {tab:'qa',category:'매출 전망',item_id:'Q3',question:'어썸레이가 목표로 하는 매출 및 시장 점유율은 어느 정도인가요?',summary:'보수적으로 2026~28년 동안 멤브레인 매출 60→180→240억원, 시장 점유율 7→12→14%를 목표로 합니다.',detail:'• 2026년: 1,000장 공급 → 매출 60억 원 (점유율 7%)\n• 2027년: 3,000장 공급 → 매출 180억 원 (점유율 12%)\n• 2028년: 4,000장 공급 → 매출 240억 원 (점유율 14%)\n• CNT 멤브레인 매출 발생 시점: 2026년 하반기 예상',keywords:'매출 전망,시장 점유율,2026,2027,2028',sort_order:3},
+    {tab:'qa',category:'양산 역량',item_id:'Q4',question:'어썸레이는 EUV 펠리클 양산 경험이 없는데, 2026년에 실제로 양산 공급이 가능합니까?',summary:'양산 경험 부족 리스크를 대기업 전문가 영입 + S&S Tech 협력으로 구조적으로 해결하고 있습니다.',detail:'• LG화학·에코프로비엠 25년 양산 경력의 CPO 영입\n• 어썸레이: CNT 멤브레인 집중 / S&S Tech: 완제품 제조·검사\n• 2026년 하반기 월 170장 → 2027~28년 월 340장 점진적 증설\n• 클린룸 준공 완료, 총 Capex: 20억원',keywords:'양산 경험,클린룸,S&S Tech,CPO,Capex',sort_order:4},
+    {tab:'qa',category:'경쟁사',item_id:'Q5',question:'FST/Canatu 등이 먼저 qualification을 완료하면 어썸레이의 기회는 사라지는 것 아닌가요?',summary:'그렇지 않습니다. EUV 펠리클은 반드시 2nd/3rd 소스를 필요로 하는 전략 부품 시장입니다.',detail:'• FST/Canatu: 배치(Batch) 공정 기반 — 대면적화 및 수율에 구조적 한계\n• 어썸레이: Roll-to-Roll 연속 공정 — 균일도 및 원가 경쟁력 우위\n• 전 세계 CNT 멤브레인/펠리클 경쟁사: Canatu, Mitsui, Lintec 3곳뿐\n• FST Qual 통과는 오히려 시장 타당성 검증 신호',keywords:'FST,Canatu,경쟁,qualification,2nd source',sort_order:5},
+    {tab:'qa',category:'글로벌 전략',item_id:'Q6',question:'삼성과의 관계 때문에 TSMC 등 다른 파운드리에 공급이 제한되지 않나요?',summary:'어썸레이는 특정 고객 전속이 아닌 글로벌 CNT 소재 플랫폼을 지향합니다.',detail:'• 삼성은 핵심 초기 고객이자 기술 검증 파트너\n• 원천 IP와 생산 설비는 어썸레이가 보유\n• SST 직접 투자 제안 있었으나 종속 우려로 거절\n• 국내: S&S Tech 경유 삼성 공급 / 해외: 어썸레이 직접 공급 가능',keywords:'삼성,TSMC,글로벌,IP,전략',sort_order:6},
+    {tab:'qa',category:'기술',item_id:'Q11',question:'CNT 멤브레인에 요구되는 물성(스펙)과 어썸레이 수준은?',summary:'2026년 1월 기준, 어썸레이는 크기·투과율·내열성 목표를 달성했으며 균일도 개선 중입니다.',detail:'• EUV 투과율: 94% 이상 → 달성\n• 내열성: 800°C 이상 → 달성\n• 크기: Full-size (110×144mm) → 달성\n• 균일도: 0.4% 이하 → 개선 진행 중\n• 수소 플라즈마: 5,400초 이상 → 통과',keywords:'요구 스펙,투과율,균일도,내열성',sort_order:11},
+    {tab:'qa',category:'기술',item_id:'Q12',question:'어썸레이 CNT 멤브레인의 진입장벽과 차별화 포인트는?',summary:'전 세계에서 풀사이즈 CNT 멤브레인을 제작 가능한 곳은 어썸레이와 Canatu 단 두 곳뿐입니다.',detail:'• FC-CVD + Direct Spinning + Roll-to-Roll 연속 공정\n• CNT 합성 및 생산 기술 완전 내재화\n• 섬유와 멤브레인 둘 다 생산하는 회사는 전 세계에 어썸레이 하나뿐\n• 소재, 공정, 생산 장비 IP 모두 보유',keywords:'진입장벽,차별점,Roll-to-Roll,IP',sort_order:12},
+    {tab:'qa',category:'투자 및 재무',item_id:'Q23',question:'현재 투자 유치 일정 및 구조는 어떻게 되나요?',summary:'브릿지 라운드로 총 최대 90억원을 목표로 하며, 멀티 클로징으로 진행합니다.',detail:'• 브릿지 라운드 프리 밸류: 560억원\n• 확정 투자 기관: 원익 20억원, DB 10억원, 유니온 10억원, 액시스 10억원\n• 현재 런웨이: 월 번 2억원 이하\n• 2026년 하반기 주관사 선정, 2027년 중 Pre IPO 예정',keywords:'투자 유치,브릿지 라운드,Pre IPO',sort_order:23},
+    {tab:'qa',category:'IPO',item_id:'Q25',question:'IPO 일정은 어떻게 계획하고 있나요?',summary:'2026~27년 주관사 선정, 2028년 기술 특례 상장을 목표로 합니다.',detail:'• 2026년 하반기 주관사 선정\n• 2027년 중 Pre IPO 예정\n• 2028년 기술 특례 상장 예정\n• TCB 기술 등급: T-3',keywords:'IPO,주관사,기술 특례 상장,TCB',sort_order:25},
+    {tab:'faq',category:'회사 소개',item_id:'IQ1',question:'기본정보',summary:'설립일: 2018년 7월 3일. 주요사업: CNT 섬유·필름 소재, 차세대 X선 발생장치, 공기 살균/정화 모듈.',detail:'성과: 4차례 총 270억원 규모 투자 유치, 중기부 TIPS(7억) 선정, 그린뉴딜 유망기업(30억) 선정, SBA core 100 선정',keywords:'설립일,주요사업,성과,투자',sort_order:1},
+    {tab:'faq',category:'회사 소개',item_id:'IQ2',question:'회사 및 대표소개',summary:'소부장 유니콘을 꿈꾸는 어썸레이 대표 김세훈. 서울대학교 재료공학부 박사, 연쇄창업가.',detail:'탄소나노튜브 신소재를 섬유 및 다양한 형태로 생산하는 기반 기술 보유.',keywords:'대표,김세훈,서울대,박사,연쇄창업가',sort_order:2},
+    {tab:'faq',category:'회사 소개',item_id:'IQ5',question:'아이템소개',summary:'소부장 스타트업으로 공기살균/정화, 차세대 광원, CNT 소재 세 가지를 동시에 사업화 추진 중.',detail:'에어썸: 기존 공조기에 부착하여 미세먼지, 세균, 바이러스를 필터 없이 제거. 국내 30여 곳 이상 건물에 설치.',keywords:'에어썸,CNT,X선,공기살균,소부장',sort_order:3},
+    {tab:'faq',category:'투자',item_id:'IQ8',question:'투자 관련',summary:'2023년 하반기에 170억 규모의 시리즈B 투자 마무리. 지금까지 4번에 걸쳐 총 270억원의 투자 유치.',detail:'내년 생산라인 확충을 위한 투자단계 진행을 고려하고 있습니다.',keywords:'시리즈B,170억,270억,투자유치',sort_order:4},
+    {tab:'faq',category:'비전',item_id:'IQ10',question:'향후 계획',summary:'단 하나의 목표, 매출. 손익분기점을 넘어 안정적 매출을 만들어가는 원년.',detail:'2026년 상장을 목표로 하고 있습니다.',keywords:'매출,손익분기점,상장,2026',sort_order:5},
+  ];
+  const { error } = await sb.from('qa_items').insert(defaults);
+  if (error) { showToast('초기 데이터 삽입 오류: ' + error.message, true); return; }
+  allData = defaults.map((d, i) => ({...d, id: i+1}));
+  pubBuildCat(); pubRender();
+  showToast('초기 데이터가 DB에 저장되었습니다.');
+}
+
+/* ── 헬퍼 ── */
+function getPubData() { return allData.filter(d => d.tab === curPubTab); }
+function getAdmData() { return allData.filter(d => d.tab === curAdmTab); }
+
+/* ── MODE ── */
+function showMode(m) {
+  document.getElementById('pubPage').classList.toggle('on', m === 'public');
+  document.getElementById('admPage').classList.toggle('on', m === 'admin');
+  document.getElementById('btnPublic').classList.toggle('active', m === 'public');
+  document.getElementById('btnAdmin').classList.toggle('active', m === 'admin');
+}
+
+/* ── LOCK ── */
+function checkPw() {
+  if (document.getElementById('pwInp').value === ADMIN_PW) {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('admContent').style.display = 'block';
+    admBuildCat(); admRender();
+  } else {
+    document.getElementById('pwErr').style.display = 'block';
+    document.getElementById('pwInp').value = '';
+  }
+}
+function logout() {
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('admContent').style.display = 'none';
+  document.getElementById('pwInp').value = '';
+  document.getElementById('pwErr').style.display = 'none';
+}
+
+/* ── PUBLIC ── */
+function pubBuildCat() {
+  const cats = [...new Set(getPubData().map(d => d.category))];
+  document.getElementById('pubCat').innerHTML = '<option value="">전체</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+function pubSwitchTab(t) {
+  curPubTab = t;
+  document.querySelectorAll('#pubPage .tab-btn').forEach((b, i) => b.classList.toggle('active', (t==='qa'&&i===0)||(t==='faq'&&i===1)));
+  document.getElementById('pubSrc').value = '';
+  pubBuildCat(); pubRender();
+}
+function pubRender() {
+  const q = document.getElementById('pubSrc').value.toLowerCase();
+  const cat = document.getElementById('pubCat').value;
+  const data = getPubData().filter(d =>
+    (!cat || d.category === cat) &&
+    (!q || d.question.toLowerCase().includes(q) || (d.summary||'').toLowerCase().includes(q) || (d.keywords||'').toLowerCase().includes(q))
+  );
+  document.getElementById('totalCount').textContent = allData.length;
+  document.getElementById('pubCount').textContent = `${data.length}개 항목`;
+  const list = document.getElementById('pubList');
+  if (!data.length) { list.innerHTML = '<div class="empty">검색 결과가 없습니다.</div>'; return; }
+  list.innerHTML = data.map(d => {
+    const kws = (d.keywords||'').split(',').filter(Boolean).slice(0,4);
+    return `<div class="qa-item" id="pub-${d.id}" onclick="pubToggle(${d.id})">
+      <div class="qi-top">
+        <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+          <span class="qi-id">${d.item_id}</span>
+          <span class="qi-q">${d.question}</span>
+        </div>
+        <span class="qi-cat">${d.category||''}</span>
+      </div>
+      <div class="qi-sum">${d.summary||''}</div>
+      <div class="qi-detail" id="pd-${d.id}">${(d.detail||'').replace(/\n/g,'<br>')}</div>
+      ${kws.length ? `<div class="qi-kws">${kws.map(k=>`<span class="kwc">${k.trim()}</span>`).join('')}</div>` : ''}
+      <span class="ask-btn" onclick="event.stopPropagation();askAbout(${d.id})">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5.5h9M5.5 1l5 4.5-5 4.5" stroke-linecap="round"/></svg>AI에게 더 물어보기
+      </span>
+    </div>`;
+  }).join('');
+}
+function pubToggle(id) {
+  const d = document.getElementById('pd-'+id);
+  const c = document.getElementById('pub-'+id);
+  const open = d.classList.contains('show');
+  document.querySelectorAll('.qi-detail').forEach(e => e.classList.remove('show'));
+  document.querySelectorAll('.qa-item').forEach(e => e.classList.remove('open'));
+  if (!open) { d.classList.add('show'); c.classList.add('open'); }
+}
+
+/* ── CHAT ── */
+function askAbout(id) {
+  const item = allData.find(d => d.id === id);
+  if (!item) return;
+  document.getElementById('chatInp').value = `[${item.item_id}] "${item.question}"에 대해 투자자 관점에서 핵심 포인트를 설명해 주세요.`;
+  sendChat();
+}
+function askSug(el) { document.getElementById('chatInp').value = el.textContent; sendChat(); }
+function chatKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
+function ar(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,72)+'px'; }
+
+async function sendChat() {
+  const inp = document.getElementById('chatInp');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('chatSugs').style.display = 'none';
+  addMsg('user', text);
+  chatHistory.push({role:'user', content:text});
+  const tid = addTyping();
+  const sys = `당신은 어썸레이(aweXome Ray Inc.)의 투자자 Q&A 전문 어시스턴트입니다. 아래 Q&A 데이터를 기반으로 정확하고 간결하게 답변하세요. 데이터에 없는 내용은 솔직하게 말하세요.\n\n=== Q&A 데이터 ===\n${allData.map(d=>`[${d.item_id}] ${d.question}\n요약: ${d.summary}\n상세: ${d.detail}`).join('\n\n')}`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:chatHistory})
+    });
+    const data = await res.json();
+    removeTyping(tid);
+    const reply = data.content?.[0]?.text || '답변을 가져오는 데 실패했습니다.';
+    addMsg('ai', reply);
+    chatHistory.push({role:'assistant', content:reply});
+  } catch(e) {
+    removeTyping(tid);
+    addMsg('ai', '오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  document.getElementById('sendBtn').disabled = false;
+}
+function addMsg(role, text) {
+  const c = document.getElementById('chatMsgs');
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  d.innerHTML = `<span class="msg-role">${role==='ai'?'AI Assistant':'You'}</span><div class="msg-bbl">${text.replace(/\n/g,'<br>')}</div>`;
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function addTyping() {
+  const c = document.getElementById('chatMsgs');
+  const id = 't-'+Date.now();
+  const d = document.createElement('div');
+  d.className = 'msg ai'; d.id = id;
+  d.innerHTML = `<span class="msg-role">AI Assistant</span><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+  return id;
+}
+function removeTyping(id) { const e = document.getElementById(id); if(e) e.remove(); }
+
+/* ── ADMIN ── */
+function admBuildCat() {
+  const cats = [...new Set(getAdmData().map(d => d.category))];
+  document.getElementById('admCat').innerHTML = '<option value="">전체</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+function admSwitchTab(t) {
+  curAdmTab = t;
+  document.querySelectorAll('.adm-tab').forEach((b,i) => b.classList.toggle('active',(t==='qa'&&i===0)||(t==='faq'&&i===1)));
+  document.getElementById('admSrc').value = '';
+  admBuildCat(); admRender();
+}
+function admRender() {
+  const q = document.getElementById('admSrc').value.toLowerCase();
+  const cat = document.getElementById('admCat').value;
+  const data = getAdmData().filter(d =>
+    (!cat || d.category === cat) &&
+    (!q || d.question.toLowerCase().includes(q) || (d.keywords||'').toLowerCase().includes(q))
+  );
+  document.getElementById('admCount').textContent = `${data.length}개 항목`;
+  const list = document.getElementById('admList');
+  if (!data.length) { list.innerHTML = '<div class="empty">항목이 없습니다.</div>'; return; }
+  list.innerHTML = data.map(d => `
+    <div class="adm-item">
+      <div class="adm-left">
+        <div class="adm-meta"><span class="adm-id">${d.item_id}</span><span class="adm-cat">${d.category||''}</span></div>
+        <div class="adm-q">${d.question}</div>
+        <div class="adm-s">${d.summary||''}</div>
+      </div>
+      <div class="adm-acts">
+        <button class="act-btn" onclick="openEdit(${d.id})">편집</button>
+        <button class="act-btn del" onclick="delItem(${d.id})">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ── MODAL ── */
+function openModal() {
+  editingDbId = null;
+  document.getElementById('mTitle').textContent = '새 항목 추가';
+  ['fId','fCat','fQ','fSum','fDet','fKw'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('fTab').value = curAdmTab;
+  document.getElementById('modalBg').classList.add('show');
+}
+function openEdit(id) {
+  const item = allData.find(d => d.id === id);
+  if (!item) return;
+  editingDbId = id;
+  document.getElementById('mTitle').textContent = '항목 편집';
+  document.getElementById('fId').value = item.item_id;
+  document.getElementById('fTab').value = item.tab;
+  document.getElementById('fCat').value = item.category||'';
+  document.getElementById('fQ').value = item.question;
+  document.getElementById('fSum').value = item.summary||'';
+  document.getElementById('fDet').value = item.detail||'';
+  document.getElementById('fKw').value = item.keywords||'';
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
+
+async function saveItem() {
+  const payload = {
+    item_id: document.getElementById('fId').value.trim(),
+    tab: document.getElementById('fTab').value,
+    category: document.getElementById('fCat').value.trim(),
+    question: document.getElementById('fQ').value.trim(),
+    summary: document.getElementById('fSum').value.trim(),
+    detail: document.getElementById('fDet').value.trim(),
+    keywords: document.getElementById('fKw').value.trim(),
+  };
+  if (!payload.item_id || !payload.question) { alert('ID와 질문은 필수입니다.'); return; }
+  let error;
+  if (editingDbId) {
+    ({ error } = await sb.from('qa_items').update(payload).eq('id', editingDbId));
+    if (!error) { const idx = allData.findIndex(d=>d.id===editingDbId); if(idx>=0) allData[idx]={...allData[idx],...payload}; }
+  } else {
+    const { data, error: e } = await sb.from('qa_items').insert(payload).select().single();
+    error = e;
+    if (!error && data) allData.push(data);
+  }
+  if (error) { showToast('저장 오류: ' + error.message, true); return; }
+  closeModal();
+  admBuildCat(); admRender();
+  pubBuildCat(); pubRender();
+  showToast(editingDbId ? '수정되었습니다.' : '새 항목이 추가되었습니다.');
+}
+
+async function delItem(id) {
+  if (!confirm('이 항목을 삭제하시겠습니까?')) return;
+  const { error } = await sb.from('qa_items').delete().eq('id', id);
+  if (error) { showToast('삭제 오류: ' + error.message, true); return; }
+  allData = allData.filter(d => d.id !== id);
+  admBuildCat(); admRender();
+  pubBuildCat(); pubRender();
+  showToast('삭제되었습니다.');
+}
+
+/* ── TOAST ── */
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+loadData();
+</script>
+</body>
+</html>
