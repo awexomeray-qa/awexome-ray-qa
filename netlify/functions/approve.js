@@ -38,7 +38,7 @@ exports.handler = async (event) => {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
     },
     body: JSON.stringify({
-      from: 'aweXome Ray IR <onboarding@resend.dev>',
+      from: 'aweXome Ray IR <ir@awexomeray.com>',
       to: [email],
       subject: '[aweXome Ray] 투자자 Q&A 열람 링크가 발송되었습니다',
       html: `
