@@ -467,7 +467,7 @@ async function sendChat() {
   try {
     const res = await fetch('/.netlify/functions/chat', {
       method:'POST', headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},
-      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:chatHistory})
+      body: JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1000,system:sys,messages:chatHistory})
     });
     const data = await res.json();
     removeTyping(tid);
