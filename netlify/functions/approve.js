@@ -19,7 +19,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ status: 'approved', token, approved_at: new Date().toISOString() })
+      body: JSON.stringify({ status: 'approved', token, token_used: false, approved_at: new Date().toISOString() })
     }
   );
 
