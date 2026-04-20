@@ -105,15 +105,33 @@ async function submitRequest() {
   // 중복 신청 확인
   const { data: existing } = await sb.from('access_requests').select('id,status').eq('email', email).single();
   if (existing) {
-    if (existing.status === 'approved') {
-      showErr('이미 승인된 이메일입니다. 발송된 링크를 확인해 주세요.');
+if (existing) {
+  if (existing.status === 'approved') {
+    // 이미 승인된 경우 새 토큰 자동 발급
+    const res = await fetch('/.netlify/functions/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: existing.id, name, email, resend: true })
+    });
+    if (res.ok) {
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('confirmedEmail').textContent = email;
+      document.getElementById('successWrap').style.display = 'block';
+      document.querySelector('.success h2').textContent = '새 링크 발송 완료';
+      document.querySelector('.success p').innerHTML = '새로운 열람 링크를 이메일로 보내드렸습니다.<br><br><span style="color:var(--accent)">' + email + '</span>';
     } else {
-      showErr('이미 신청된 이메일입니다. 검토 중입니다.');
+      showErr('링크 발송 중 오류가 발생했습니다. 다시 시도해 주세요.');
     }
     btn.disabled = false;
     btn.textContent = '열람 신청하기';
     return;
+  } else {
+    showErr('이미 신청된 이메일입니다. 검토 중입니다.');
+    btn.disabled = false;
+    btn.textContent = '열람 신청하기';
+    return;
   }
+}
 
   const { error } = await sb.from('access_requests').insert({ name, company, email, status: 'pending' });
   if (error) { showErr('오류가 발생했습니다. 다시 시도해 주세요.'); btn.disabled = false; btn.textContent = '열람 신청하기'; return; }
