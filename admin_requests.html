@@ -11,7 +11,7 @@
 :root{
   --bg:#0a0a0f;--bg2:#111118;--bg3:#16161f;
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
-  --accent:#c8f55a;--text:#f0ede6;--text2:#9996a0;--text3:#5c5968;
+  --accent:#c8f55a;--accent2:#8bffd4;--text:#f0ede6;--text2:#9996a0;--text3:#5c5968;
   --card:#13131c;--radius:12px;--mono:'DM Mono',monospace;--sans:'Pretendard',sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
@@ -29,8 +29,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .filter-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
 .filter-btn.active{background:var(--accent);color:#0a0a0f;border-color:var(--accent)}
 .count{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:12px}
-.req-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.req-info{}
+.req-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.req-info{flex:1;min-width:0}
 .req-name{font-size:14px;font-weight:500;margin-bottom:3px}
 .req-meta{font-size:12px;color:var(--text2);margin-bottom:3px}
 .req-email{font-family:var(--mono);font-size:11px;color:var(--accent2)}
@@ -42,16 +42,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .status-rejected{background:rgba(226,75,74,.1);color:#E24B4A;border:1px solid rgba(226,75,74,.3)}
 .approve-btn{padding:7px 14px;border-radius:6px;border:1px solid rgba(200,245,90,.3);background:rgba(200,245,90,.08);color:var(--accent);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
 .approve-btn:hover{background:rgba(200,245,90,.15)}
-.approve-btn:disabled{opacity:.4;cursor:not-allowed}
 .reject-btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s}
 .reject-btn:hover{color:#E24B4A;border-color:rgba(226,75,74,.3)}
 .resend-btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s}
 .resend-btn:hover{background:var(--bg3)}
+.history-wrap{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.history-title{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px}
+.history-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text2)}
+.history-num{font-family:var(--mono);color:var(--text3)}
+.history-accessed{color:var(--accent2)}
+.history-ip{color:var(--text3);font-family:var(--mono)}
 .empty{padding:40px;text-align:center;font-size:12px;color:var(--text3);font-family:var(--mono)}
 .toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid rgba(200,245,90,.3);border-radius:8px;padding:9px 14px;font-family:var(--mono);font-size:11px;color:var(--accent);z-index:200;transform:translateY(50px);opacity:0;transition:all .3s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.err{border-color:rgba(226,75,74,.4);color:#E24B4A}
 .refresh-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer}
+.badge-count{font-family:var(--mono);font-size:10px;color:var(--accent);margin-left:6px}
 </style>
 </head>
 <body>
@@ -61,7 +67,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <button class="refresh-btn" onclick="loadRequests()">새로고침</button>
 </div>
 
-<!-- LOCK -->
 <div class="lock-wrap" id="lockScreen">
   <div class="lock-title">관리자 비밀번호</div>
   <input class="lock-input" type="password" id="pwInp" placeholder="••••••" onkeydown="if(event.key==='Enter')checkPw()">
@@ -69,7 +74,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <button class="lock-btn" onclick="checkPw()">입장</button>
 </div>
 
-<!-- MAIN -->
 <div class="main" id="mainContent" style="display:none">
   <div class="page-title">열람 신청 관리</div>
   <div class="page-sub">신청을 승인하면 투자자에게 개인 열람 링크가 자동 발송됩니다.</div>
@@ -88,6 +92,7 @@ const SUPABASE_URL = 'https://aehromyvzjzbkfcqspqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_p_9upkexFkkMsjEA4yOKlg_Ssu_n4o3';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const ADMIN_PW = 'awexome2026';
+const STATUS_LABELS = { pending: '대기중', approved: '승인됨', rejected: '거절됨' };
 
 let allRequests = [];
 let curFilter = 'all';
@@ -117,75 +122,91 @@ function setFilter(f, btn) {
   render();
 }
 
+function statusLabel(s) { return STATUS_LABELS[s] || s; }
+
 function render() {
   const data = curFilter === 'all' ? allRequests : allRequests.filter(r => r.status === curFilter);
-  document.getElementById('countLabel').textContent = `${data.length}개`;
+  document.getElementById('countLabel').textContent = data.length + '개';
   const list = document.getElementById('reqList');
   if (!data.length) { list.innerHTML = '<div class="empty">신청 내역이 없습니다.</div>'; return; }
 
   // 이메일별 그룹핑
   const groups = {};
-data.forEach(r => {
-  if (!groups[r.email]) groups[r.email] = [];
-  groups[r.email].push(r);
-});
-// 각 그룹 내 최신순 정렬
-Object.keys(groups).forEach(k => {
-  groups[k].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-});
+  data.forEach(function(r) {
+    if (!groups[r.email]) groups[r.email] = [];
+    groups[r.email].push(r);
+  });
+  // 각 그룹 내 최신순 정렬
+  Object.keys(groups).forEach(function(k) {
+    groups[k].sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  });
 
-  list.innerHTML = Object.entries(groups).map(([email, rows]) => {
-    const latest = rows[0];
-    const time = new Date(latest.created_at).toLocaleString('ko-KR');
-    const statusLabel = { pending: '대기중', approved: '승인됨', rejected: '거절됨' }[latest.status] || latest.status;
-    const statusClass = `status-${latest.status}`;
-    let actions = '';
+  var html = '';
+  Object.entries(groups).forEach(function(entry) {
+    var email = entry[0];
+    var rows = entry[1];
+    var latest = rows[0];
+    var time = new Date(latest.created_at).toLocaleString('ko-KR');
+    var sc = 'status-' + latest.status;
+    var sl = statusLabel(latest.status);
+
+    var actions = '';
     if (latest.status === 'pending') {
-      actions = `<button class="approve-btn" onclick="approve(${latest.id},'${latest.name}','${latest.email}')">승인 + 링크 발송</button>
-                 <button class="reject-btn" onclick="reject(${latest.id})">거절</button>`;
+      actions = '<button class="approve-btn" onclick="approve(' + latest.id + ',\'' + latest.name + '\',\'' + latest.email + '\')">승인 + 링크 발송</button>'
+              + '<button class="reject-btn" onclick="reject(' + latest.id + ')">거절</button>';
     } else if (latest.status === 'approved') {
-      actions = `<button class="resend-btn" onclick="resend(${latest.id},'${latest.name}','${latest.email}','${latest.token}')">링크 재발송</button>`;
+      actions = '<button class="resend-btn" onclick="resend(' + latest.id + ',\'' + latest.name + '\',\'' + latest.email + '\',\'' + latest.token + '\')">링크 재발송</button>';
     }
 
-    // 히스토리 행들
-    const history = rows.length > 1 ? `
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px">신청 히스토리 (${rows.length}회)</div>
-        ${rows.map((r, i) => `
-          <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text2)">
-            <span style="font-family:var(--mono);color:var(--text3)">#${rows.length - i}</span>
-            <span>${new Date(r.created_at).toLocaleString('ko-KR')}</span>
-            <span class="status-badge status-${r.status}" style="font-size:9px;padding:1px 5px">${{ pending: '대기중', approved: '승인됨', rejected: '거절됨' }[r.status] || r.status}</span>
-            ${r.last_accessed_at ? `<span style="color:var(--accent2)">열람: ${new Date(r.last_accessed_at).toLocaleString('ko-KR')}</span>` : ''}
-          </div>`).join('')}
-      </div>` : '';
+    var timeStr = time + ' 신청';
+    if (latest.last_accessed_at) timeStr += ' · 마지막 접속: ' + new Date(latest.last_accessed_at).toLocaleString('ko-KR');
+    if (latest.request_ip) timeStr += ' · IP: ' + latest.request_ip;
 
-    return `<div class="req-card">
-      <div class="req-info">
-        <div class="req-name">${latest.name} ${rows.length > 1 ? `<span style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-left:6px">${rows.length}회 신청</span>` : ''}</div>
-        <div class="req-meta">${latest.company || '소속 미입력'}</div>
-        <div class="req-email">${email}</div>
-        <div class="req-time">${time} 신청${latest.last_accessed_at ? ' · 마지막 접속: ' + new Date(latest.last_accessed_at).toLocaleString('ko-KR') : ''}${latest.request_ip ? ' · IP: ' + latest.request_ip : ''}</div>
-        ${history}
-      </div>
-      <div class="req-actions">
-        <span class="status-badge ${statusClass}">${statusLabel}</span>
-        ${actions}
-      </div>
-    </div>`;
-  }).join('');
+    var countBadge = rows.length > 1 ? '<span class="badge-count">' + rows.length + '회 신청</span>' : '';
+
+    var historyHtml = '';
+    if (rows.length > 1) {
+      historyHtml = '<div class="history-wrap"><div class="history-title">신청 히스토리 (' + rows.length + '회)</div>';
+      rows.forEach(function(r, i) {
+        var rTime = new Date(r.created_at).toLocaleString('ko-KR');
+        var rAccessed = r.last_accessed_at ? '<span class="history-accessed">열람: ' + new Date(r.last_accessed_at).toLocaleString('ko-KR') + '</span>' : '';
+        var rIp = r.request_ip ? '<span class="history-ip">IP: ' + r.request_ip + '</span>' : '';
+        historyHtml += '<div class="history-row">'
+          + '<span class="history-num">#' + (rows.length - i) + '</span>'
+          + '<span>' + rTime + '</span>'
+          + '<span class="status-badge status-' + r.status + '" style="font-size:9px;padding:1px 5px">' + statusLabel(r.status) + '</span>'
+          + rAccessed + rIp
+          + '</div>';
+      });
+      historyHtml += '</div>';
+    }
+
+    html += '<div class="req-card">'
+      + '<div class="req-info">'
+      + '<div class="req-name">' + latest.name + countBadge + '</div>'
+      + '<div class="req-meta">' + (latest.company || '소속 미입력') + '</div>'
+      + '<div class="req-email">' + email + '</div>'
+      + '<div class="req-time">' + timeStr + '</div>'
+      + historyHtml
+      + '</div>'
+      + '<div class="req-actions">'
+      + '<span class="status-badge ' + sc + '">' + sl + '</span>'
+      + actions
+      + '</div></div>';
+  });
+  list.innerHTML = html;
 }
 
 async function approve(id, name, email) {
-  if (!confirm(`${name}(${email})님을 승인하고 링크를 발송할까요?`)) return;
+  if (!confirm(name + '(' + email + ')님을 승인하고 링크를 발송할까요?')) return;
   const res = await fetch('/.netlify/functions/approve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name, email })
+    body: JSON.stringify({ id: id, name: name, email: email })
   });
   const data = await res.json();
   if (!res.ok || data.error) { showToast('승인 실패: ' + (data.error || ''), true); return; }
-  showToast(`${name}님께 링크가 발송되었습니다.`);
+  showToast(name + '님께 링크가 발송되었습니다.');
   loadRequests();
 }
 
@@ -198,22 +219,23 @@ async function reject(id) {
 }
 
 async function resend(id, name, email, token) {
-  if (!confirm(`${name}님께 링크를 재발송할까요?`)) return;
+  if (!confirm(name + '님께 링크를 재발송할까요?')) return;
   const res = await fetch('/.netlify/functions/approve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name, email, resend: true, existingToken: token })
+    body: JSON.stringify({ id: id, name: name, email: email, resend: true, existingToken: token })
   });
   const data = await res.json();
   if (!res.ok || data.error) { showToast('재발송 실패', true); return; }
-  showToast(`${name}님께 링크가 재발송되었습니다.`);
+  showToast(name + '님께 링크가 재발송되었습니다.');
+  loadRequests();
 }
 
-function showToast(msg, isErr = false) {
+function showToast(msg, isErr) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show' + (isErr ? ' err' : '');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
 }
 </script>
 </body>
