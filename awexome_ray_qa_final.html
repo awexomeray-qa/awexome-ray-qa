@@ -321,8 +321,36 @@ let curAdmTab = 'qa';
 let editingDbId = null;
 let chatHistory = [];
 
+  // 토큰 검증
+async function verifyToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) {
+    window.location.href = '/request.html';
+    return false;
+  }
+  const { data, error } = await sb
+    .from('access_requests')
+    .select('id, name, status, token_used')
+    .eq('token', token)
+    .eq('status', 'approved')
+    .single();
+if (error || !data || data.token_used) {
+  window.location.href = '/request.html?expired=1';
+  return false;
+}
+  // 마지막 접속 시간 업데이트
+  await sb.from('access_requests')
+    .update({ last_accessed_at: new Date().toISOString() })
+    .eq('token', token);
+  // 토큰 1회 사용 처리
+await sb.from('access_requests')
+  .update({ token_used: true })
+  .eq('token', token);
+  return true;
+}
 /* ── 데이터 로드 ── */
-async function loadData() {
+async function verifyToken().then(ok => { if (ok) loadData(); }); {
   try {
     const { data, error } = await sb.from('qa_items').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
     if (error) throw error;
