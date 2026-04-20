@@ -99,6 +99,13 @@ async function submitRequest() {
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
+  // IP 조회
+let requestIp = '';
+try {
+  const ipRes = await fetch('https://api.ipify.org?format=json');
+  const ipData = await ipRes.json();
+  requestIp = ipData.ip;
+} catch(e) {}
   btn.textContent = '신청 중...';
 
   // 중복 신청 확인
@@ -130,7 +137,7 @@ async function submitRequest() {
   }
 
   // 신규 신청
-  const { error } = await sb.from('access_requests').insert({ name, company, email, status: 'pending' });
+  const { error } = await sb.from('access_requests').insert({ name, company, email, status: 'pending', request_ip: requestIp });
   if (error) {
     showErr('오류가 발생했습니다. 다시 시도해 주세요.');
     btn.disabled = false;
