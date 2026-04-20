@@ -350,7 +350,7 @@ await sb.from('access_requests')
   return true;
 }
 /* ── 데이터 로드 ── */
-verifyToken().then(ok => { if (ok) loadData(); });
+(async () => { const ok = await verifyToken(); if (ok) await loadData(); })();
   try {
     const { data, error } = await sb.from('qa_items').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
     if (error) throw error;
