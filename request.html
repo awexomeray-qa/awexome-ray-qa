@@ -99,60 +99,73 @@ async function submitRequest() {
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
-  // IP 조회
-let requestIp = '';
-try {
-  const ipRes = await fetch('https://api.ipify.org?format=json');
-  const ipData = await ipRes.json();
-  requestIp = ipData.ip;
-} catch(e) {}
   btn.textContent = '신청 중...';
 
-  // 중복 신청 확인
-  const { data: existing } = await sb.from('access_requests').select('id,status').eq('email', email).single();
+  // IP 조회
+  let requestIp = '';
+  try {
+    const ipRes = await fetch('https://api.ipify.org?format=json');
+    const ipData = await ipRes.json();
+    requestIp = ipData.ip;
+  } catch(e) {}
 
-  if (existing) {
-if (existing.status === 'approved') {
-  // 새 행 추가 후 승인
-  const { data: newRow } = await sb.from('access_requests')
-    .insert({ name, company, email, status: 'pending', request_ip: requestIp })
-    .select().single();
-  const res = await fetch('/.netlify/functions/approve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: newRow.id, name, email, resend: true })
-      });
-      if (res.ok) {
-        document.getElementById('formWrap').style.display = 'none';
-        document.getElementById('confirmedEmail').textContent = email;
-        document.getElementById('successTitle').textContent = '새 링크 발송 완료';
-        document.getElementById('successMsg').innerHTML = '새로운 열람 링크를 이메일로 보내드렸습니다.<br><br><span style="color:var(--accent)">' + email + '</span>';
-        document.getElementById('successWrap').style.display = 'block';
-      } else {
-        showErr('링크 발송 중 오류가 발생했습니다. 다시 시도해 주세요.');
-      }
-    } else {
-      showErr('이미 신청된 이메일입니다. 검토 중입니다.');
-    }
+  // 기존 신청 확인 (가장 최근 것)
+  const { data: existing } = await sb
+    .from('access_requests')
+    .select('id,status')
+    .eq('email', email)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existing && existing.status === 'pending') {
+    // 검토 중인 경우
+    showErr('이미 신청된 이메일입니다. 검토 중입니다.');
     btn.disabled = false;
     btn.textContent = '열람 신청하기';
     return;
   }
 
-  // 신규 신청
-  const { error } = await sb.from('access_requests').insert({ name, company, email, status: 'pending', request_ip: requestIp });
-  if (error) {
+  // 신규 신청 또는 재신청 — 항상 새 행 추가
+  const { data: newRow, error: insertErr } = await sb
+    .from('access_requests')
+    .insert({ name, company, email, status: 'pending', request_ip: requestIp })
+    .select()
+    .single();
+
+  if (insertErr || !newRow) {
     showErr('오류가 발생했습니다. 다시 시도해 주세요.');
     btn.disabled = false;
     btn.textContent = '열람 신청하기';
     return;
   }
 
-  // 관리자 알림 발송
+  // 이미 승인된 이메일이면 자동 승인 + 링크 발송
+  if (existing && existing.status === 'approved') {
+    const res = await fetch('/.netlify/functions/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: newRow.id, name: name, email: email })
+    });
+    if (res.ok) {
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('confirmedEmail').textContent = email;
+      document.getElementById('successTitle').textContent = '새 링크 발송 완료';
+      document.getElementById('successMsg').innerHTML = '새로운 열람 링크를 이메일로 보내드렸습니다.<br><br><span style="color:var(--accent)">' + email + '</span>';
+      document.getElementById('successWrap').style.display = 'block';
+    } else {
+      showErr('링크 발송 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    }
+    btn.disabled = false;
+    btn.textContent = '열람 신청하기';
+    return;
+  }
+
+  // 일반 신규 신청 — 관리자 알림 발송
   await fetch('/.netlify/functions/notify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, company, email })
+    body: JSON.stringify({ name: name, company: company, email: email })
   });
 
   document.getElementById('formWrap').style.display = 'none';
