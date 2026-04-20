@@ -122,23 +122,47 @@ function render() {
   document.getElementById('countLabel').textContent = `${data.length}개`;
   const list = document.getElementById('reqList');
   if (!data.length) { list.innerHTML = '<div class="empty">신청 내역이 없습니다.</div>'; return; }
-  list.innerHTML = data.map(r => {
-    const time = new Date(r.created_at).toLocaleString('ko-KR');
-    const statusLabel = { pending: '대기중', approved: '승인됨', rejected: '거절됨' }[r.status] || r.status;
-    const statusClass = `status-${r.status}`;
+
+  // 이메일별 그룹핑
+  const groups = {};
+  data.forEach(r => {
+    if (!groups[r.email]) groups[r.email] = [];
+    groups[r.email].push(r);
+  });
+
+  list.innerHTML = Object.entries(groups).map(([email, rows]) => {
+    const latest = rows[0];
+    const time = new Date(latest.created_at).toLocaleString('ko-KR');
+    const statusLabel = { pending: '대기중', approved: '승인됨', rejected: '거절됨' }[latest.status] || latest.status;
+    const statusClass = `status-${latest.status}`;
     let actions = '';
-    if (r.status === 'pending') {
-      actions = `<button class="approve-btn" onclick="approve(${r.id},'${r.name}','${r.email}')">승인 + 링크 발송</button>
-                 <button class="reject-btn" onclick="reject(${r.id})">거절</button>`;
-    } else if (r.status === 'approved') {
-      actions = `<button class="resend-btn" onclick="resend(${r.id},'${r.name}','${r.email}','${r.token}')">링크 재발송</button>`;
+    if (latest.status === 'pending') {
+      actions = `<button class="approve-btn" onclick="approve(${latest.id},'${latest.name}','${latest.email}')">승인 + 링크 발송</button>
+                 <button class="reject-btn" onclick="reject(${latest.id})">거절</button>`;
+    } else if (latest.status === 'approved') {
+      actions = `<button class="resend-btn" onclick="resend(${latest.id},'${latest.name}','${latest.email}','${latest.token}')">링크 재발송</button>`;
     }
+
+    // 히스토리 행들
+    const history = rows.length > 1 ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px">신청 히스토리 (${rows.length}회)</div>
+        ${rows.map((r, i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text2)">
+            <span style="font-family:var(--mono);color:var(--text3)">#${rows.length - i}</span>
+            <span>${new Date(r.created_at).toLocaleString('ko-KR')}</span>
+            <span class="status-badge status-${r.status}" style="font-size:9px;padding:1px 5px">${{ pending: '대기중', approved: '승인됨', rejected: '거절됨' }[r.status] || r.status}</span>
+            ${r.last_accessed_at ? `<span style="color:var(--accent2)">열람: ${new Date(r.last_accessed_at).toLocaleString('ko-KR')}</span>` : ''}
+          </div>`).join('')}
+      </div>` : '';
+
     return `<div class="req-card">
       <div class="req-info">
-        <div class="req-name">${r.name}</div>
-        <div class="req-meta">${r.company || '소속 미입력'}</div>
-        <div class="req-email">${r.email}</div>
-        <div class="req-time">${time} 신청${r.last_accessed_at ? ' · 마지막 접속: ' + new Date(r.last_accessed_at).toLocaleString('ko-KR') : ''}</div>
+        <div class="req-name">${latest.name} ${rows.length > 1 ? `<span style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-left:6px">${rows.length}회 신청</span>` : ''}</div>
+        <div class="req-meta">${latest.company || '소속 미입력'}</div>
+        <div class="req-email">${email}</div>
+        <div class="req-time">${time} 신청${latest.last_accessed_at ? ' · 마지막 접속: ' + new Date(latest.last_accessed_at).toLocaleString('ko-KR') : ''}</div>
+        ${history}
       </div>
       <div class="req-actions">
         <span class="status-badge ${statusClass}">${statusLabel}</span>
