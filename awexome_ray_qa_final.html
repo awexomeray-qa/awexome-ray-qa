@@ -350,7 +350,7 @@ await sb.from('access_requests')
   return true;
 }
 /* ── 데이터 로드 ── */
-(async () => { const ok = await verifyToken(); if (ok) await loadData(); })();
+async function loadData() {
   try {
     const { data, error } = await sb.from('qa_items').select('*').order('sort_order', { ascending: true }).order('id', { ascending: true });
     if (error) throw error;
@@ -363,6 +363,7 @@ await sb.from('access_requests')
     document.getElementById('pubList').innerHTML = '<div class="empty">데이터를 불러오지 못했습니다.</div>';
   }
 }
+(async () => { const ok = await verifyToken(); if (ok) await loadData(); })();
 
 /* ── 기본 데이터 시드 ── */
 async function seedDefaultData() {
