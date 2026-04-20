@@ -161,7 +161,7 @@ function render() {
         <div class="req-name">${latest.name} ${rows.length > 1 ? `<span style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-left:6px">${rows.length}회 신청</span>` : ''}</div>
         <div class="req-meta">${latest.company || '소속 미입력'}</div>
         <div class="req-email">${email}</div>
-        <div class="req-time">${time} 신청${latest.last_accessed_at ? ' · 마지막 접속: ' + new Date(latest.last_accessed_at).toLocaleString('ko-KR') : ''}</div>
+        <div class="req-time">${time} 신청${latest.last_accessed_at ? ' · 마지막 접속: ' + new Date(latest.last_accessed_at).toLocaleString('ko-KR') : ''}${latest.request_ip ? ' · IP: ' + latest.request_ip : ''}</div>
         ${history}
       </div>
       <div class="req-actions">
