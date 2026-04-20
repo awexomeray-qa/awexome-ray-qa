@@ -49,6 +49,10 @@ exports.handler = async (event) => {
             아래 버튼을 클릭하여 자료를 열람하세요.
           </p>
           <a href="${accessUrl}" style="display:inline-block;padding:14px 28px;background:#c8f55a;color:#0a0a0f;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">Q&amp;A 열람하기</a>
+          
+          <p style="margin-top:16px;font-size:12px;color:#E24B4A;font-weight:600;">
+  ⚠️ 보안상의 이유로 본 링크는 1회만 유효합니다.
+</p>
           <p style="margin-top:24px;font-size:12px;color:#999;line-height:1.6">
             본 링크는 신청하신 분 개인용입니다.<br>
             문의사항은 ir@awexomeray.com 으로 연락 주세요.
